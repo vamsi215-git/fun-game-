@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Would You Rather? 🎓 College Edition</title>
+  <link href="https://fonts.googleapis.com/css2?family=Righteous&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #0f0a1e;
+      --card: #1a1333;
+      --a: #ff2d78;
+      --b: #00d4ff;
+      --yellow: #ffe044;
+      --purple: #7c3aed;
+      --text: #f0e6ff;
+      --muted: #8b7aa8;
+      --glow-a: 0 0 40px rgba(255,45,120,0.4);
+      --glow-b: 0 0 40px rgba(0,212,255,0.4);
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      font-family: 'Nunito', sans-serif;
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* BG blobs */
+    .blob {
+      position: fixed; border-radius: 50%;
+      filter: blur(80px); opacity: 0.18;
+      pointer-events: none; z-index: 0;
+    }
+    .blob-1 { width:500px;height:500px;background:var(--a);top:-100px;left:-150px; }
+    .blob-2 { width:400px;height:400px;background:var(--b);bottom:-100px;right:-100px; }
+    .blob-3 { width:300px;height:300px;background:var(--purple);top:40%;left:40%; }
+
+    /* Confetti canvas */
+    #confetti { position:fixed;inset:0;pointer-events:none;z-index:999; }
+
+    /* ===== HEADER ===== */
+    header {
+      text-align: center;
+      padding: 48px 20px 24px;
+      position: relative; z-index:1;
+    }
+    .header-badge {
+      display: inline-block;
+      background: linear-gradient(135deg, var(--a), var(--purple));
+      padding: 6px 20px; border-radius: 100px;
+      font-size: 0.78rem; font-weight: 800;
+      letter-spacing: 2px; text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+    h1 {
+      font-family: 'Righteous', cursive;
+      font-size: clamp(2rem, 6vw, 4rem);
+      line-height: 1.1;
+      background: linear-gradient(135deg, #fff 0%, var(--b) 50%, var(--a) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 12px;
+    }
+    .subtitle {
+      color: var(--muted); font-size: 1rem;
+      font-weight: 600;
+    }
+
+    /* ===== STATS BAR ===== */
+    .stats-bar {
+      display: flex; justify-content: center;
+      gap: 32px; padding: 16px 20px;
+      position: relative; z-index:1;
+    }
+    .stat {
+      text-align: center;
+    }
+    .stat-val {
+      font-family: 'Righteous', cursive;
+      font-size: 1.6rem; color: var(--yellow);
+      text-shadow: 0 0 20px rgba(255,224,68,0.6);
+    }
+    .stat-label {
+      font-size: 0.7rem; color: var(--muted);
+      letter-spacing: 2px; text-transform: uppercase;
+    }
+
+    /* ===== PROGRESS ===== */
+    .progress-wrap {
+      max-width: 700px; margin: 0 auto 32px;
+      padding: 0 20px; position: relative; z-index:1;
+    }
+    .progress-info {
+      display: flex; justify-content: space-between;
+      font-size: 0.78rem; color: var(--muted);
+      margin-bottom: 8px; font-weight: 700;
+    }
+    .progress-track {
+      height: 6px; background: rgba(255,255,255,0.08);
+      border-radius: 100px; overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(to right, var(--a), var(--b));
+      border-radius: 100px;
+      transition: width 0.5s cubic-bezier(0.4,0,0.2,1);
+      box-shadow: 0 0 12px rgba(0,212,255,0.5);
+    }
+
+    /* ===== CATEGORY TABS ===== */
+    .categories {
+      display: flex; flex-wrap: wrap;
+      justify-content: center; gap: 10px;
+      padding: 0 20px 28px;
+      position: relative; z-index:1;
+    }
+    .cat-btn {
+      padding: 8px 18px; border-radius: 100px;
+      border: 1.5px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.04);
+      color: var(--muted); font-family: 'Nunito', sans-serif;
+      font-size: 0.82rem; font-weight: 800;
+      cursor: pointer; transition: all 0.25s;
+      letter-spacing: 0.5px;
+    }
+    .cat-btn:hover, .cat-btn.active {
+      border-color: var(--b);
+      color: var(--b);
+      background: rgba(0,212,255,0.08);
+      box-shadow: 0 0 16px rgba(0,212,255,0.2);
+    }
+
+    /* ===== QUESTION CARD ===== */
+    .game-area {
+      max-width: 820px; margin: 0 auto;
+      padding: 0 20px 60px;
+      position: relative; z-index:1;
+    }
+    .question-label {
+      text-align: center;
+      font-size: 0.72rem; letter-spacing: 3px;
+      color: var(--muted); text-transform: uppercase;
+      margin-bottom: 24px; font-weight: 800;
+    }
+
+    .choices {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: 0 30px 80px rgba(0,0,0,0.5);
+      position: relative;
+    }
+
+    /* OR divider */
+    .or-badge {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 56px; height: 56px;
+      background: var(--bg);
+      border: 3px solid rgba(255,255,255,0.15);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Righteous', cursive;
+      font-size: 1rem; color: var(--yellow);
+      z-index: 10;
+      box-shadow: 0 0 30px rgba(0,0,0,0.8);
+      text-shadow: 0 0 12px rgba(255,224,68,0.8);
+    }
+
+    .choice {
+      padding: 52px 36px;
+      cursor: pointer;
+      position: relative; overflow: hidden;
+      transition: all 0.3s;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      text-align: center; gap: 16px;
+      min-height: 260px;
+      border: none; background: none;
+      font-family: 'Nunito', sans-serif;
+      color: var(--text);
+    }
+    .choice-a {
+      background: linear-gradient(135deg, rgba(255,45,120,0.18), rgba(255,45,120,0.08));
+      border-right: 1px solid rgba(255,255,255,0.06);
+    }
+    .choice-b {
+      background: linear-gradient(135deg, rgba(0,212,255,0.08), rgba(0,212,255,0.18));
+    }
+    .choice::before {
+      content: '';
+      position: absolute; inset: 0;
+      opacity: 0; transition: opacity 0.3s;
+    }
+    .choice-a::before { background: rgba(255,45,120,0.15); }
+    .choice-b::before { background: rgba(0,212,255,0.15); }
+    .choice:hover::before { opacity: 1; }
+    .choice:hover { transform: scale(1.02); }
+
+    .choice-emoji { font-size: 3rem; display: block; }
+    .choice-text {
+      font-size: clamp(0.95rem, 2vw, 1.2rem);
+      font-weight: 800; line-height: 1.4;
+      position: relative; z-index:1;
+    }
+    .choice-tag {
+      font-size: 0.72rem; letter-spacing: 2px;
+      text-transform: uppercase; font-weight: 800;
+      padding: 4px 14px; border-radius: 100px;
+      position: relative; z-index:1;
+    }
+    .choice-a .choice-tag { background: rgba(255,45,120,0.25); color: var(--a); }
+    .choice-b .choice-tag { background: rgba(0,212,255,0.2); color: var(--b); }
+
+    /* ===== RESULT STATE ===== */
+    .choice.chosen-a {
+      background: linear-gradient(135deg, rgba(255,45,120,0.4), rgba(255,45,120,0.2)) !important;
+      box-shadow: inset 0 0 60px rgba(255,45,120,0.2);
+    }
+    .choice.chosen-b {
+      background: linear-gradient(135deg, rgba(0,212,255,0.2), rgba(0,212,255,0.4)) !important;
+      box-shadow: inset 0 0 60px rgba(0,212,255,0.2);
+    }
+    .choice.dimmed { opacity: 0.45; filter: grayscale(0.4); }
+
+    .vote-bar-wrap {
+      width: 100%; margin-top: 8px;
+      position: relative; z-index:1;
+      display: none;
+    }
+    .vote-bar-track {
+      height: 8px; border-radius: 100px;
+      background: rgba(255,255,255,0.1); overflow: hidden;
+    }
+    .vote-bar-fill-a {
+      height: 100%; border-radius: 100px;
+      background: linear-gradient(to right, var(--a), #ff6eb0);
+      width: 0; transition: width 0.8s cubic-bezier(0.4,0,0.2,1);
+      box-shadow: 0 0 12px rgba(255,45,120,0.6);
+    }
+    .vote-bar-fill-b {
+      height: 100%; border-radius: 100px;
+      background: linear-gradient(to right, var(--b), #80e8ff);
+      width: 0; transition: width 0.8s cubic-bezier(0.4,0,0.2,1);
+      box-shadow: 0 0 12px rgba(0,212,255,0.6);
+    }
+    .vote-pct {
+      font-family: 'Righteous', cursive;
+      font-size: 1.6rem; display: none;
+      position: relative; z-index:1;
+    }
+    .choice-a .vote-pct { color: var(--a); text-shadow: 0 0 20px rgba(255,45,120,0.6); }
+    .choice-b .vote-pct { color: var(--b); text-shadow: 0 0 20px rgba(0,212,255,0.6); }
+
+    /* ===== BUTTONS ===== */
+    .btn-row {
+      display: flex; justify-content: center;
+      gap: 14px; margin-top: 32px; flex-wrap: wrap;
+    }
+    .btn {
+      padding: 14px 32px; border-radius: 100px;
+      font-family: 'Nunito', sans-serif;
+      font-size: 0.9rem; font-weight: 800;
+      cursor: pointer; border: none;
+      transition: all 0.25s; letter-spacing: 0.5px;
+    }
+    .btn-next {
+      background: linear-gradient(135deg, var(--a), var(--purple));
+      color: #fff;
+      box-shadow: 0 8px 32px rgba(255,45,120,0.35);
+    }
+    .btn-next:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 14px 40px rgba(255,45,120,0.5);
+    }
+    .btn-skip {
+      background: rgba(255,255,255,0.06);
+      color: var(--muted);
+      border: 1.5px solid rgba(255,255,255,0.1);
+    }
+    .btn-skip:hover { color: var(--text); border-color: rgba(255,255,255,0.25); }
+    .btn-share {
+      background: linear-gradient(135deg, #25d366, #128c7e);
+      color: #fff;
+      box-shadow: 0 8px 32px rgba(37,211,102,0.3);
+    }
+    .btn-share:hover { transform: translateY(-3px); }
+
+    /* ===== RESULT SCREEN ===== */
+    #result-screen {
+      display: none;
+      max-width: 600px; margin: 0 auto;
+      padding: 0 20px 80px;
+      text-align: center;
+      position: relative; z-index:1;
+    }
+    .result-emoji { font-size: 5rem; margin-bottom: 20px; display: block; }
+    .result-title {
+      font-family: 'Righteous', cursive;
+      font-size: 2.4rem;
+      background: linear-gradient(135deg, var(--yellow), var(--a));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 12px;
+    }
+    .result-sub { color: var(--muted); font-size: 1rem; font-weight: 600; margin-bottom: 36px; }
+    .result-stats {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 16px; margin-bottom: 36px;
+    }
+    .result-stat-card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px; padding: 20px;
+    }
+    .result-stat-num {
+      font-family: 'Righteous', cursive;
+      font-size: 2.2rem; color: var(--yellow);
+      text-shadow: 0 0 20px rgba(255,224,68,0.5);
+    }
+    .result-stat-label { font-size: 0.78rem; color: var(--muted); font-weight: 700; margin-top: 4px; }
+    .btn-restart {
+      background: linear-gradient(135deg, var(--b), var(--purple));
+      color: #fff; font-size: 1rem; padding: 16px 40px;
+      box-shadow: 0 8px 32px rgba(0,212,255,0.3);
+    }
+    .btn-restart:hover { transform: translateY(-3px); box-shadow: 0 14px 40px rgba(0,212,255,0.4); }
+
+    /* ===== TOAST ===== */
+    .toast {
+      position: fixed; bottom: 32px; left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: rgba(30,20,50,0.95);
+      border: 1px solid rgba(255,255,255,0.15);
+      backdrop-filter: blur(20px);
+      padding: 14px 28px; border-radius: 100px;
+      font-size: 0.9rem; font-weight: 700;
+      transition: transform 0.4s cubic-bezier(0.4,0,0.2,1);
+      z-index: 1000; white-space: nowrap;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    @media (max-width: 600px) {
+      .choices { grid-template-columns: 1fr; }
+      .or-badge { top: 50%; transform: translate(-50%,-50%) rotate(90deg); }
+      .choice { padding: 36px 24px; min-height: 180px; }
+      .choice:hover { transform: none; }
+      .result-stats { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="confetti"></canvas>
+<div class="blob blob-1"></div>
+<div class="blob blob-2"></div>
+<div class="blob blob-3"></div>
+
+<header>
+  <div class="header-badge">🎓 College Edition</div>
+  <h1>Would You Rather?</h1>
+  <p class="subtitle">The ultimate college dilemma game 😈</p>
+</header>
+
+<div class="stats-bar">
+  <div class="stat">
+    <div class="stat-val" id="score">0</div>
+    <div class="stat-label">Answered</div>
+  </div>
+  <div class="stat">
+    <div class="stat-val" id="streak">0🔥</div>
+    <div class="stat-label">Streak</div>
+  </div>
+  <div class="stat">
+    <div class="stat-val" id="total-q">30</div>
+    <div class="stat-label">Questions</div>
+  </div>
+</div>
+
+<div class="progress-wrap">
+  <div class="progress-info">
+    <span id="prog-text">Question 1 of 30</span>
+    <span id="prog-pct">0%</span>
+  </div>
+  <div class="progress-track">
+    <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+  </div>
+</div>
+
+<div class="categories">
+  <button class="cat-btn active" data-cat="all" onclick="filterCat(this,'all')">🌀 All</button>
+  <button class="cat-btn" data-cat="love" onclick="filterCat(this,'love')">💘 Love</button>
+  <button class="cat-btn" data-cat="academic" onclick="filterCat(this,'academic')">📚 Academic</button>
+  <button class="cat-btn" data-cat="social" onclick="filterCat(this,'social')">🎉 Social</button>
+  <button class="cat-btn" data-cat="career" onclick="filterCat(this,'career')">💼 Career</button>
+  <button class="cat-btn" data-cat="food" onclick="filterCat(this,'food')">🍕 Food</button>
+</div>
+
+<!-- GAME AREA -->
+<div class="game-area" id="game-area">
+  <div class="question-label" id="q-label">✨ Question 1</div>
+  <div class="choices" id="choices-wrap">
+    <div class="or-badge">OR</div>
+
+    <!-- Option A -->
+    <button class="choice choice-a" id="choice-a" onclick="choose('a')">
+      <span class="choice-emoji" id="emoji-a">🤔</span>
+      <span class="choice-tag">Option A</span>
+      <span class="choice-text" id="text-a">Loading...</span>
+      <div class="vote-pct" id="pct-a">0%</div>
+      <div class="vote-bar-wrap" id="bar-a-wrap">
+        <div class="vote-bar-track"><div class="vote-bar-fill-a" id="bar-a"></div></div>
+      </div>
+    </button>
+
+    <!-- Option B -->
+    <button class="choice choice-b" id="choice-b" onclick="choose('b')">
+      <span class="choice-emoji" id="emoji-b">😏</span>
+      <span class="choice-tag">Option B</span>
+      <span class="choice-text" id="text-b">Loading...</span>
+      <div class="vote-pct" id="pct-b">0%</div>
+      <div class="vote-bar-wrap" id="bar-b-wrap">
+        <div class="vote-bar-track"><div class="vote-bar-fill-b" id="bar-b"></div></div>
+      </div>
+    </button>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-skip" onclick="skipQ()">⏭ Skip</button>
+    <button class="btn btn-next" id="btn-next" onclick="nextQ()" style="display:none">Next Question →</button>
+    <button class="btn btn-share" onclick="shareResult()" style="display:none" id="btn-share">📤 Share</button>
+  </div>
+</div>
+
+<!-- RESULT SCREEN -->
+<div id="result-screen">
+  <span class="result-emoji">🏆</span>
+  <div class="result-title">You're a Legend!</div>
+  <p class="result-sub">You answered all the tough questions 😤🔥</p>
+  <div class="result-stats">
+    <div class="result-stat-card">
+      <div class="result-stat-num" id="r-answered">0</div>
+      <div class="result-stat-label">Questions Answered</div>
+    </div>
+    <div class="result-stat-card">
+      <div class="result-stat-num" id="r-skipped">0</div>
+      <div class="result-stat-label">Skipped</div>
+    </div>
+    <div class="result-stat-card">
+      <div class="result-stat-num" id="r-streak">0🔥</div>
+      <div class="result-stat-label">Best Streak</div>
+    </div>
+    <div class="result-stat-card">
+      <div class="result-stat-num" id="r-personality">🤩</div>
+      <div class="result-stat-label">Your Vibe</div>
+    </div>
+  </div>
+  <button class="btn btn-restart" onclick="restart()">🔄 Play Again!</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const ALL_QUESTIONS = [
+  // LOVE 💘
+  { cat:'love', emoji_a:'😍', emoji_b:'💔', a:'Date your crush but they never text back', b:'Never date your crush but stay best friends forever' },
+  { cat:'love', emoji_a:'💑', emoji_b:'😭', a:'Be in a long distance relationship for 3 years', b:'Stay single for 3 years but focus on yourself' },
+  { cat:'love', emoji_a:'🥰', emoji_b:'👀', a:'Have your crush slide into your DMs', b:'Accidentally like your crush\'s 3-year-old photo' },
+  { cat:'love', emoji_a:'💌', emoji_b:'🙈', a:'Confess your feelings and get rejected', b:'Never confess and always wonder "what if"' },
+  { cat:'love', emoji_a:'📱', emoji_b:'😤', a:'Be left on read for 3 days', b:'See your crush online but they never reply' },
+  { cat:'love', emoji_a:'💍', emoji_b:'🎓', a:'Find your soulmate in college', b:'Become super successful but find love at 35' },
+
+  // ACADEMIC 📚
+  { cat:'academic', emoji_a:'😴', emoji_b:'📖', a:'Sleep 8 hours and fail an exam', b:'Pull an all-nighter and barely pass' },
+  { cat:'academic', emoji_a:'🤝', emoji_b:'💯', a:'Copy homework from a friend', b:'Do it yourself and get 50%' },
+  { cat:'academic', emoji_a:'😱', emoji_b:'🙃', a:'Forget your assignment on the due date', b:'Submit early but realise it was wrong' },
+  { cat:'academic', emoji_a:'🏆', emoji_b:'😂', a:'Top the class but have no social life', b:'Be average but have the best college memories' },
+  { cat:'academic', emoji_a:'📝', emoji_b:'😬', a:'Give a presentation with no preparation', b:'Take a surprise exam on a topic you skipped' },
+  { cat:'academic', emoji_a:'🎒', emoji_b:'💻', a:'Attend every class but learn nothing', b:'Bunk classes but watch all lectures online' },
+
+  // SOCIAL 🎉
+  { cat:'social', emoji_a:'🏠', emoji_b:'🎊', a:'Host a party that nobody shows up to', b:'Go to a party where you know nobody' },
+  { cat:'social', emoji_a:'😬', emoji_b:'😭', a:'Trip and fall in front of the entire college', b:'Call your professor "Mom" in class' },
+  { cat:'social', emoji_a:'🤳', emoji_b:'👥', a:'Have 10K Instagram followers but no real friends', b:'Have zero followers but 10 ride-or-die friends' },
+  { cat:'social', emoji_a:'🎤', emoji_b:'🚶', a:'Sing in front of the whole college at an event', b:'Walk on stage and forget what you were going to say' },
+  { cat:'social', emoji_a:'📸', emoji_b:'🙅', a:'Have an embarrassing photo go viral in college', b:'Be completely invisible and unknown for 4 years' },
+  { cat:'social', emoji_a:'💬', emoji_b:'😤', a:'Be the one who always starts group chats', b:'Be removed from every group chat by accident' },
+
+  // CAREER 💼
+  { cat:'career', emoji_a:'💰', emoji_b:'❤️', a:'Earn ₹5 LPA doing your dream job', b:'Earn ₹20 LPA doing a job you hate' },
+  { cat:'career', emoji_a:'🏢', emoji_b:'🏡', a:'Work at a top MNC with a toxic boss', b:'Work at a startup from home with an amazing team' },
+  { cat:'career', emoji_a:'🌍', emoji_b:'🏠', a:'Get a job abroad but leave family behind', b:'Stay in India with family but miss the opportunity' },
+  { cat:'career', emoji_a:'🧠', emoji_b:'📊', a:'Be a Data Scientist at Google', b:'Be your own startup founder at 25' },
+  { cat:'career', emoji_a:'🎯', emoji_b:'😴', a:'Work 12 hours a day on something you love', b:'Work 4 hours a day on something boring' },
+
+  // FOOD 🍕
+  { cat:'food', emoji_a:'🍕', emoji_b:'🍔', a:'Eat only pizza for a whole month', b:'Eat only maggi for a whole month' },
+  { cat:'food', emoji_a:'🧋', emoji_b:'☕', a:'Give up boba/cold coffee forever', b:'Give up chai/tea forever' },
+  { cat:'food', emoji_a:'🍫', emoji_b:'🍟', a:'Give up chocolate for a year', b:'Give up french fries for a year' },
+  { cat:'food', emoji_a:'🥗', emoji_b:'🍔', a:'Eat healthy but boring food every day', b:'Eat junk food every day but feel guilty' },
+  { cat:'food', emoji_a:'🍱', emoji_b:'🏃', a:'Get free food delivery forever but no gym', b:'Free gym membership forever but cook yourself' },
+  { cat:'food', emoji_a:'🧁', emoji_b:'🌶️', a:'Eat something extremely sweet every meal', b:'Eat something extremely spicy every meal' },
+
+  // MISC / FUN
+  { cat:'social', emoji_a:'📵', emoji_b:'💸', a:'No phone for 1 month', b:'No money to spend for 1 month' },
+  { cat:'academic', emoji_a:'🧑‍💻', emoji_b:'🎮', a:'Code for 8 hours straight', b:'Play games for 8 hours straight (but feel guilty)' },
+];
+
+let questions = [...ALL_QUESTIONS];
+let current = 0;
+let answered = 0;
+let skipped = 0;
+let streak = 0;
+let bestStreak = 0;
+let chosen = null;
+let shuffled = [];
+
+function shuffle(arr) {
+  return [...arr].sort(() => Math.random() - 0.5);
+}
+
+function filterCat(btn, cat) {
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  questions = cat === 'all' ? [...ALL_QUESTIONS] : ALL_QUESTIONS.filter(q => q.cat === cat);
+  restart(false);
+}
+
+function loadQ() {
+  if (current >= shuffled.length) { showResult(); return; }
+  const q = shuffled[current];
+  chosen = null;
+
+  document.getElementById('q-label').textContent = `✨ Question ${current + 1}`;
+  document.getElementById('emoji-a').textContent = q.emoji_a;
+  document.getElementById('emoji-b').textContent = q.emoji_b;
+  document.getElementById('text-a').textContent = q.a;
+  document.getElementById('text-b').textContent = q.b;
+
+  // Reset state
+  const ca = document.getElementById('choice-a');
+  const cb = document.getElementById('choice-b');
+  ca.className = 'choice choice-a';
+  cb.className = 'choice choice-b';
+  ca.disabled = false; cb.disabled = false;
+
+  document.getElementById('pct-a').style.display = 'none';
+  document.getElementById('pct-b').style.display = 'none';
+  document.getElementById('bar-a-wrap').style.display = 'none';
+  document.getElementById('bar-b-wrap').style.display = 'none';
+  document.getElementById('bar-a').style.width = '0';
+  document.getElementById('bar-b').style.width = '0';
+  document.getElementById('btn-next').style.display = 'none';
+  document.getElementById('btn-share').style.display = 'none';
+
+  // Progress
+  const pct = Math.round((current / shuffled.length) * 100);
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('prog-text').textContent = `Question ${current + 1} of ${shuffled.length}`;
+  document.getElementById('prog-pct').textContent = pct + '%';
+  document.getElementById('total-q').textContent = shuffled.length;
+}
+
+function choose(side) {
+  if (chosen) return;
+  chosen = side;
+  answered++;
+  streak++;
+  if (streak > bestStreak) bestStreak = streak;
+  document.getElementById('score').textContent = answered;
+  document.getElementById('streak').textContent = streak + '🔥';
+
+  // Fake vote percentages (realistic random)
+  let pctA, pctB;
+  if (side === 'a') {
+    pctA = Math.floor(Math.random() * 30) + 45; // 45-75
+    pctB = 100 - pctA;
+  } else {
+    pctB = Math.floor(Math.random() * 30) + 45;
+    pctA = 100 - pctB;
+  }
+
+  const ca = document.getElementById('choice-a');
+  const cb = document.getElementById('choice-b');
+  ca.disabled = true; cb.disabled = true;
+
+  if (side === 'a') {
+    ca.classList.add('chosen-a');
+    cb.classList.add('dimmed');
+    launchConfetti('#ff2d78');
+  } else {
+    cb.classList.add('chosen-b');
+    ca.classList.add('dimmed');
+    launchConfetti('#00d4ff');
+  }
+
+  // Show percentages
+  setTimeout(() => {
+    document.getElementById('pct-a').style.display = 'block';
+    document.getElementById('pct-b').style.display = 'block';
+    document.getElementById('pct-a').textContent = pctA + '%';
+    document.getElementById('pct-b').textContent = pctB + '%';
+    document.getElementById('bar-a-wrap').style.display = 'block';
+    document.getElementById('bar-b-wrap').style.display = 'block';
+    setTimeout(() => {
+      document.getElementById('bar-a').style.width = pctA + '%';
+      document.getElementById('bar-b').style.width = pctB + '%';
+    }, 50);
+    document.getElementById('btn-next').style.display = 'inline-block';
+    document.getElementById('btn-share').style.display = 'inline-block';
+  }, 300);
+
+  // Fun toast messages
+  const toasts = [
+    '🔥 Bold choice!', '😂 Really??', '👀 Interesting...', '💀 No way!',
+    '🤯 That\'s wild!', '😤 Respect!', '🤝 Valid.', '💅 Iconic.',
+    streak > 4 ? `🔥 ${streak} in a row!` : '⚡ Keep going!'
+  ];
+  showToast(toasts[Math.floor(Math.random() * toasts.length)]);
+}
+
+function nextQ() { current++; loadQ(); }
+function skipQ() {
+  skipped++; streak = 0;
+  document.getElementById('streak').textContent = '0🔥';
+  showToast('⏭ Skipped! Coward 😂');
+  current++; loadQ();
+}
+
+function showResult() {
+  document.getElementById('game-area').style.display = 'none';
+  const rs = document.getElementById('result-screen');
+  rs.style.display = 'block';
+  document.getElementById('r-answered').textContent = answered;
+  document.getElementById('r-skipped').textContent = skipped;
+  document.getElementById('r-streak').textContent = bestStreak + '🔥';
+  const vibes = ['😈 Chaotic', '🧘 Balanced', '🤩 Iconic', '💀 Unhinged', '👑 Legendary'];
+  document.getElementById('r-personality').textContent = vibes[Math.floor(Math.random() * vibes.length)];
+  bigConfetti();
+}
+
+function restart(resetFilter = true) {
+  current = 0; answered = 0; skipped = 0; streak = 0; bestStreak = 0;
+  shuffled = shuffle(questions);
+  document.getElementById('score').textContent = '0';
+  document.getElementById('streak').textContent = '0🔥';
+  document.getElementById('result-screen').style.display = 'none';
+  document.getElementById('game-area').style.display = 'block';
+  loadQ();
+}
+
+function shareResult() {
+  const text = `🎓 Would You Rather - College Edition!\nI answered ${answered} questions with a ${bestStreak}🔥 streak!\nPlay now: ${window.location.href}`;
+  if (navigator.share) {
+    navigator.share({ title: 'Would You Rather?', text });
+  } else {
+    navigator.clipboard.writeText(text);
+    showToast('📋 Copied to clipboard!');
+  }
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ===== CONFETTI =====
+const canvas = document.getElementById('confetti');
+const ctx = canvas.getContext('2d');
+canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+window.addEventListener('resize', () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; });
+
+let particles = [];
+function Particle(color) {
+  this.x = Math.random() * canvas.width;
+  this.y = -10;
+  this.color = color;
+  this.size = Math.random() * 8 + 4;
+  this.speedX = (Math.random() - 0.5) * 6;
+  this.speedY = Math.random() * 4 + 2;
+  this.rotation = Math.random() * 360;
+  this.rotSpeed = (Math.random() - 0.5) * 8;
+  this.opacity = 1;
+  this.shape = Math.random() > 0.5 ? 'rect' : 'circle';
+}
+function launchConfetti(color) {
+  for (let i = 0; i < 40; i++) {
+    const p = new Particle(color);
+    p.x = canvas.width / 2 + (Math.random() - 0.5) * 200;
+    p.y = canvas.height * 0.4;
+    p.speedY = (Math.random() - 0.5) * 10;
+    p.speedX = (Math.random() - 0.5) * 12;
+    particles.push(p);
+  }
+  animateConfetti();
+}
+function bigConfetti() {
+  const colors = ['#ff2d78','#00d4ff','#ffe044','#7c3aed','#00ff88'];
+  for (let i = 0; i < 120; i++) {
+    const p = new Particle(colors[Math.floor(Math.random() * colors.length)]);
+    particles.push(p);
+  }
+  animateConfetti();
+}
+let animating = false;
+function animateConfetti() {
+  if (animating) return;
+  animating = true;
+  function loop() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    particles = particles.filter(p => p.opacity > 0.05);
+    particles.forEach(p => {
+      p.x += p.speedX; p.y += p.speedY;
+      p.speedY += 0.15; p.rotation += p.rotSpeed;
+      p.opacity -= 0.012;
+      ctx.save();
+      ctx.globalAlpha = p.opacity;
+      ctx.fillStyle = p.color;
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rotation * Math.PI / 180);
+      if (p.shape === 'rect') ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size/2);
+      else { ctx.beginPath(); ctx.arc(0,0,p.size/2,0,Math.PI*2); ctx.fill(); }
+      ctx.restore();
+    });
+    if (particles.length > 0) requestAnimationFrame(loop);
+    else animating = false;
+  }
+  loop();
+}
+
+// ===== INIT =====
+shuffled = shuffle(questions);
+loadQ();
+</script>
+</body>
+</html>
